@@ -23,12 +23,16 @@ def get_context(context):
     email = frappe.form_dict.get("email") or frappe.form_dict.get("username")
     password = frappe.form_dict.get("password")
     
+    # Always set redirect to /crm
+    redirect = frappe.form_dict.get("redirect", "/crm")
+    
     # Log the parameters (excluding sensitive data)
     logger.info(f"Auto Auth: Received parameters: email={'[REDACTED]' if email else 'None'}, password={'[EXISTS]' if password else 'None'}")
     
     context.auth_success = False
     context.auth_message = ""
     context.show_form = False
+    context.redirect_url = redirect
     
     if email and password:
         # Try to authenticate with the provided credentials
@@ -36,20 +40,16 @@ def get_context(context):
             logger.info(f"Auto Auth: Attempting to authenticate user: {email}")
             result = authenticate_user(email, password)
             context.auth_success = result.get("status") == "success"
-            context.auth_message = result.get("message", "")
             context.username = email
             
             logger.info(f"Auto Auth: Authentication result: {result.get('status')}")
             
-            # This will be used to redirect if successfully authenticated
+            # Always redirect to /crm if authentication was successful
             if context.auth_success:
-                redirect_url = frappe.form_dict.get("redirect") or "/app/crm"
-                context.redirect_url = redirect_url
-                logger.info(f"Auto Auth: Will redirect to: {redirect_url}")
+                logger.info(f"Auto Auth: Will redirect to: {redirect}")
         except Exception as e:
             logger.error(f"Error during auto_auth: {str(e)}", exc_info=True)
             context.auth_success = False
-            context.auth_message = _("An error occurred during authentication")
     else:
         # No credentials provided, show the form
         logger.info("Auto Auth: No credentials in parameters, showing form")
@@ -68,7 +68,7 @@ def post():
         data = frappe.form_dict
         username = data.get("username") or data.get("email")
         password = data.get("password")
-        redirect = data.get("redirect", "/app/crm")
+        redirect = data.get("redirect", "/crm")  # Default redirect to /crm
         create_user = data.get("create_user", "1") == "1"
         
         # Log the parameters (excluding sensitive data)
@@ -89,8 +89,8 @@ def post():
         if "success" not in result:
             result["success"] = result.get("status") == "success"
             
-        # Add redirect URL
-        if result.get("status") == "success" and "redirect" not in result:
+        # Always set redirect to /crm
+        if result.get("status") == "success":
             result["redirect"] = redirect
             
         frappe.response["message"] = result

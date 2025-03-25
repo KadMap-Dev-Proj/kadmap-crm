@@ -17,17 +17,15 @@ frappe.provide('crm.auto_auth');
 (function() {
     // Configuration
     var config = {
-        debug: true, // Set to true for verbose logging
+        debug: false, // Set to true for verbose logging
         authEndpoint: '/api/method/crm.www.auto_auth.post',
-        defaultRedirect: '/app/crm',
-        loaderTimeout: 30000, // 30 seconds timeout for loader
-        retryAttempts: 2 // Number of retry attempts
+        defaultRedirect: '/crm',
+        loaderTimeout: 15000 // 15 seconds timeout for loader
     };
 
     // Private variables
     var _isAuthenticating = false;
     var _loaderTimeoutId = null;
-    var _retryCount = 0;
 
     /**
      * Private logging function
@@ -44,9 +42,6 @@ frappe.provide('crm.auto_auth');
                 break;
             case 'warn':
                 console.warn(prefix, message);
-                break;
-            case 'debug':
-                console.debug(prefix, message);
                 break;
             default:
                 console.log(prefix, message);
@@ -76,7 +71,7 @@ frappe.provide('crm.auto_auth');
                 if (messageEl) messageEl.textContent = message;
             }
 
-            loader.style.display = 'block';
+            loader.style.display = 'flex';
 
             // Set timeout to prevent infinite loading
             _loaderTimeoutId = setTimeout(function() {
@@ -84,8 +79,6 @@ frappe.provide('crm.auto_auth');
                 _hideLoader();
                 _showError('Authentication timed out. Please try again.');
             }, config.loaderTimeout);
-        } else {
-            _log('Loader element not found', 'warn');
         }
     }
 
@@ -129,26 +122,12 @@ frappe.provide('crm.auto_auth');
     }
 
     /**
-     * Show success message
+     * Redirect to CRM
      */
-    function _showSuccess(message) {
-        _log('Showing success: ' + message);
-
-        var messageEl = document.getElementById('auth-message');
-        if (messageEl) {
-            messageEl.innerHTML = '<div class="alert alert-success">' + message + '</div>';
-            messageEl.style.display = 'block';
-        }
-    }
-
-    /**
-     * Redirect to specified URL
-     */
-    function _redirect(url) {
+    function _redirectToCRM(url) {
+        url = url || config.defaultRedirect;
         _log('Redirecting to: ' + url);
-        setTimeout(function() {
-            window.location.href = url;
-        }, 1000);
+        window.location.href = url;
     }
 
     /**
@@ -157,7 +136,7 @@ frappe.provide('crm.auto_auth');
      * Options:
      * - username: User email or username
      * - password: User password
-     * - redirectUrl: URL to redirect after successful authentication
+     * - redirectUrl: URL to redirect after successful authentication (defaults to /crm)
      * - createUser: Whether to create user if not exists (default: true)
      * - useQueryParams: Whether to use query parameters instead of POST (default: false)
      * - onSuccess: Success callback function
@@ -169,8 +148,7 @@ frappe.provide('crm.auto_auth');
         _log('Authentication requested with options:', 'debug');
         _log({
             username: options.username ? '[REDACTED]' : 'Not provided',
-            password: options.password ? '[EXISTS]' : 'Not provided',
-            redirectUrl: options.redirectUrl,
+            redirectUrl: options.redirectUrl || config.defaultRedirect,
             createUser: options.createUser !== false,
             useQueryParams: !!options.useQueryParams
         }, 'debug');
@@ -235,8 +213,6 @@ frappe.provide('crm.auto_auth');
             },
             success: function(data) {
                 _log('Authentication response received', 'debug');
-                _log(data, 'debug');
-
                 _isAuthenticating = false;
                 _hideLoader();
 
@@ -256,15 +232,14 @@ frappe.provide('crm.auto_auth');
                 var result = data.message;
 
                 if (result.success || result.status === 'success') {
-                    _log('Authentication successful');
-
-                    _showSuccess(result.message || 'Authentication successful!');
+                    _log('Authentication successful, redirecting...');
 
                     if (options.onSuccess) {
                         options.onSuccess(result);
                     }
 
-                    _redirect(result.redirect || redirectUrl);
+                    // Immediately redirect to CRM
+                    _redirectToCRM(result.redirect || redirectUrl);
                 } else {
                     var errorMsg = result.message || result.error || 'Authentication failed';
                     _log('Authentication failed: ' + errorMsg, 'error');
@@ -278,7 +253,6 @@ frappe.provide('crm.auto_auth');
             },
             error: function(xhr, status, error) {
                 _log('Authentication request error: ' + error, 'error');
-                _log(xhr.responseText, 'debug');
 
                 _isAuthenticating = false;
                 _hideLoader();
@@ -305,18 +279,6 @@ frappe.provide('crm.auto_auth');
                 if (options.onError) {
                     options.onError({ message: errorMsg, originalError: error });
                 }
-
-                // Retry logic if needed
-                if (_retryCount < config.retryAttempts) {
-                    _retryCount++;
-                    _log('Retrying authentication (attempt ' + _retryCount + ')', 'warn');
-
-                    setTimeout(function() {
-                        authenticate(options);
-                    }, 1000);
-                } else {
-                    _retryCount = 0;
-                }
             }
         });
 
@@ -327,12 +289,12 @@ frappe.provide('crm.auto_auth');
      * Quick login utility - for direct login from other pages
      */
     function quickLogin(username, password, redirectUrl) {
-        _log(`Quick login requested for user: ${username ? '[REDACTED]' : 'Not provided'} with redirect to: ${redirectUrl || config.defaultRedirect}`);
+        _log(`Quick login requested for user: ${username ? '[REDACTED]' : 'Not provided'}`);
 
         return authenticate({
             username: username,
             password: password,
-            redirectUrl: redirectUrl,
+            redirectUrl: redirectUrl || config.defaultRedirect,
             createUser: true
         });
     }
@@ -346,7 +308,7 @@ frappe.provide('crm.auto_auth');
         _log('Generating auth URL with options:', 'debug');
         _log({
             username: options.username ? '[REDACTED]' : 'Not provided',
-            redirectUrl: options.redirectUrl
+            redirectUrl: options.redirectUrl || config.defaultRedirect
         }, 'debug');
 
         var params = new URLSearchParams();

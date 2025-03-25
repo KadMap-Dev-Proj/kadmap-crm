@@ -1,10 +1,13 @@
-{% extends "templates/web.html" %} {% block title %}Auto Authentication{% endblock %} {% block head_include %}
+{% extends "templates/web.html" %} {% block title %}CRM Authentication{% endblock %} {% block head_include %}
 <style>
     /* Styles for the loader */
     
     .auth-loader {
-        display: none;
-        margin: 40px auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 60px auto;
         text-align: center;
     }
     
@@ -57,18 +60,18 @@
 </style>
 {% endblock %} {% block page_content %}
 <div class="container">
-    <!-- Loader for automatic authentication -->
+    <!-- Loader for authentication -->
     <div id="auth-loader" class="auth-loader">
         <div class="spinner"></div>
-        <p>Authenticating, please wait...</p>
+        <p>Loading CRM, please wait...</p>
     </div>
 
-    <!-- Message to display after authentication attempt -->
+    <!-- Error message display -->
     <div id="auth-message" class="auth-message"></div>
 
     <!-- Login form when no credentials are provided -->
     <div id="auth-form" class="auth-form">
-        <h3>Login</h3>
+        <h3>CRM Login</h3>
         <form id="login-form">
             <div class="form-group">
                 <label for="email">Email</label>
@@ -93,42 +96,15 @@
 {% endblock %} {% block script %}
 <script>
     $(document).ready(function() {
-        // Debug mode - set to true to see more console logs
-        const DEBUG = true;
-
-        // Helper function for logging
-        function log(message, type = 'log') {
-            if (!DEBUG) return;
-
-            switch (type) {
-                case 'error':
-                    console.error('[Auto Auth]', message);
-                    break;
-                case 'warn':
-                    console.warn('[Auto Auth]', message);
-                    break;
-                default:
-                    console.log('[Auto Auth]', message);
-            }
-        }
-
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const email = urlParams.get('email');
         const password = urlParams.get('password');
-        const redirect = urlParams.get('redirect') || '/';
-
-        // Show debugging info
-        log('URL Parameters:', 'log');
-        log({
-            email: email ? '[REDACTED]' : 'Not provided',
-            password: password ? '[EXISTS]' : 'Not provided',
-            redirect: redirect
-        });
+        const redirect = urlParams.get('redirect') || '/crm';
 
         // Function to show loader
         function showLoader() {
-            $('#auth-loader').css('display', 'block');
+            $('#auth-loader').css('display', 'flex');
             $('#auth-form').css('display', 'none');
             $('#auth-message').css('display', 'none');
         }
@@ -140,29 +116,30 @@
             $('#auth-message').css('display', 'none');
         }
 
-        // Function to show message
-        function showMessage(message, isError = false) {
+        // Function to show error message
+        function showError(message) {
             $('#auth-message').html(`
-                <div class="alert ${isError ? 'alert-danger' : 'alert-success'}">
-                    ${message}
-                </div>
-            `);
+            <div class="alert alert-danger">
+                ${message}
+            </div>
+        `);
             $('#auth-message').css('display', 'block');
             $('#auth-loader').css('display', 'none');
             $('#auth-form').css('display', 'none');
+
+            // Show form after a delay
+            setTimeout(function() {
+                showForm();
+            }, 3000);
         }
 
-        // Function to handle redirects
-        function handleRedirect(url) {
-            log(`Redirecting to: ${url}`);
-            setTimeout(function() {
-                window.location.href = url;
-            }, 1000);
+        // Function to redirect to CRM
+        function redirectToCRM(url) {
+            window.location.href = url || '/crm';
         }
 
         // Function to authenticate user
         function authenticateUser(email, password, createUser = true) {
-            log(`Authenticating user: ${email ? '[REDACTED]' : 'Not provided'}, createUser: ${createUser}`);
             showLoader();
 
             $.ajax({
@@ -178,52 +155,22 @@
                 beforeSend: function(xhr) {
                     // Allow the request to proceed even if not logged in
                     xhr.setRequestHeader('X-Frappe-CSRF-Token', '{{ frappe.session.csrf_token }}');
-                    log('Sending authentication request...');
                 },
                 success: function(data) {
-                    log('Authentication response received:', 'log');
-                    log(data);
-
-                    // Check if we have a message from the server
-                    if (!data || !data.message) {
-                        log('Invalid response from server', 'error');
-                        showMessage('Invalid response from server', true);
-                        return;
-                    }
-
-                    const result = data.message;
-
                     // Check if authentication was successful
-                    if (result.success || result.status === 'success') {
-                        // Success - show success message and redirect
-                        log('Authentication successful!');
-                        showMessage(result.message || 'Authentication successful! Redirecting...');
-
-                        // Redirect to the specified URL
-                        const redirectUrl = result.redirect || redirect;
-                        handleRedirect(redirectUrl);
+                    if (data.message && (data.message.success || data.message.status === 'success')) {
+                        // Success - immediately redirect to CRM
+                        redirectToCRM(data.message.redirect || redirect);
                     } else {
                         // Error - show error message and form
-                        const errorMsg = result.message || result.error || 'Unknown error';
-                        log(`Authentication failed: ${errorMsg}`, 'error');
-                        showMessage(`Authentication failed: ${errorMsg}`, true);
-
-                        // Show the form after a delay
-                        setTimeout(function() {
-                            showForm();
-                        }, 3000);
+                        const errorMsg = data.message ? (data.message.message || data.message.error || 'Authentication failed') : 'Unknown error';
+                        showError(`Authentication failed: ${errorMsg}`);
                     }
                 },
                 error: function(xhr, status, error) {
-                    log('AJAX error:', 'error');
-                    log({
-                        status: status,
-                        error: error,
-                        responseText: xhr.responseText
-                    }, 'error');
-
-                    // Try to parse the error response
                     let errorMsg = 'Error during authentication';
+
+                    // Try to parse the error message
                     try {
                         const response = JSON.parse(xhr.responseText);
                         if (response && response.message) {
@@ -236,15 +183,10 @@
                             }
                         }
                     } catch (e) {
-                        log('Could not parse error response', 'error');
+                        // Could not parse the error message
                     }
 
-                    showMessage(`Error during authentication: ${errorMsg}`, true);
-
-                    // Show the form after a delay
-                    setTimeout(function() {
-                        showForm();
-                    }, 3000);
+                    showError(`Error during authentication: ${errorMsg}`);
                 }
             });
         }
@@ -256,21 +198,13 @@
             const formPassword = $('#password').val();
             const createUser = $('#create-user').is(':checked');
 
-            log('Form submitted with:', 'log');
-            log({
-                email: formEmail ? '[REDACTED]' : 'Not provided',
-                createUser: createUser
-            });
-
             authenticateUser(formEmail, formPassword, createUser);
         });
 
         // Check if we have credentials in URL parameters
         if (email && password) {
-            log('Credentials found in URL, attempting automatic authentication');
             authenticateUser(email, password, true);
         } else {
-            log('No credentials in URL, showing login form');
             showForm();
         }
     });
