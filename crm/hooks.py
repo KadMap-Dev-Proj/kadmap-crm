@@ -27,11 +27,17 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/crm/css/crm.css"
-# app_include_js = "/assets/crm/js/crm.js"
+app_include_js = [
+	"/assets/crm/js/auto_auth.js",
+	"/assets/crm/js/crm_auto_auth_example.js"
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/crm/css/crm.css"
-# web_include_js = "/assets/crm/js/crm.js"
+web_include_js = [
+	"/assets/crm/js/auto_auth.js",
+	"/assets/crm/js/crm_auto_auth_example.js"
+]
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "crm/public/scss/website"
@@ -62,6 +68,8 @@ add_to_apps_screen = [
 
 website_route_rules = [
 	{"from_route": "/crm/<path:app_path>", "to_route": "crm"},
+	{"from_route": "/auto_auth", "to_route": "auto_auth"},
+	{"from_route": "/auto_auth_demo", "to_route": "auto_auth_demo"},
 ]
 
 # Generators

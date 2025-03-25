@@ -1,0 +1,122 @@
+{% extends "templates/web.html" %} {% block title %}Auto Auth Demo{% endblock %} {% block page_content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Auto Auth Demo</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Current User</h5>
+                        <p id="current-user">Checking...</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>Custom Login</h5>
+                        <div class="form-group mb-3">
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" id="email" placeholder="Enter email">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="password">Password</label>
+                            <input type="password" class="form-control" id="password" placeholder="Enter password">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="show-loader" checked>
+                            <label class="form-check-label" for="show-loader">
+                                Show loader during authentication
+                            </label>
+                        </div>
+                        <button id="login-btn" class="btn btn-primary">Login / Sign Up</button>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>Quick Login</h5>
+                        <p>This will use the demo credentials (demo@crmuser.com / Demo@123)</p>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="quick-loader" checked>
+                            <label class="form-check-label" for="quick-loader">
+                                Show loader during quick login
+                            </label>
+                        </div>
+                        <button id="quick-login-btn" class="btn btn-secondary">Quick Login</button>
+                    </div>
+
+                    <div class="mt-4">
+                        <div id="status-message" class="alert d-none"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block script %}
+<script>
+    $(document).ready(function() {
+        // Display current user
+        function updateUserDisplay() {
+            const currentUser = frappe.session.user || 'Guest';
+            $('#current-user').text(currentUser);
+
+            if (currentUser !== 'Guest') {
+                $('#current-user').addClass('text-success');
+            } else {
+                $('#current-user').addClass('text-danger');
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = $('#status-message');
+            statusDiv.removeClass('d-none alert-success alert-danger');
+            statusDiv.addClass(`alert-${type}`);
+            statusDiv.text(message);
+        }
+
+        // Initialize
+        updateUserDisplay();
+
+        // Custom login/signup
+        $('#login-btn').click(function() {
+            const email = $('#email').val();
+            const password = $('#password').val();
+            const showLoader = $('#show-loader').is(':checked');
+
+            if (!email || !password) {
+                showStatus('Email and password are required', 'danger');
+                return;
+            }
+
+            // Call auto_auth
+            if (typeof crm !== 'undefined' && crm.auto_auth) {
+                crm.auto_auth.authenticate({
+                    username: email,
+                    password: password,
+                    showLoader: showLoader,
+                    onSuccess: function(data) {
+                        showStatus(data.message, 'success');
+                        updateUserDisplay();
+                    },
+                    onError: function(error) {
+                        showStatus(error.message, 'danger');
+                    }
+                });
+            } else {
+                showStatus('Auto auth module not loaded. Please check if auto_auth.js is included.', 'danger');
+            }
+        });
+
+        // Quick login with demo credentials
+        $('#quick-login-btn').click(function() {
+            const showLoader = $('#quick-loader').is(':checked');
+
+            if (typeof crm !== 'undefined' && crm.auto_auth) {
+                crm.auto_auth.quickLogin(window.location.href, showLoader);
+            } else {
+                showStatus('Auto auth module not loaded. Please check if auto_auth.js is included.', 'danger');
+            }
+        });
+    });
+</script>
+{% endblock %}

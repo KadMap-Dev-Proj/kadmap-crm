@@ -1,0 +1,415 @@
+{% extends "templates/web.html" %} {% block title %}Auto Auth Debug{% endblock %} {% block head_include %}
+<style>
+    .debug-container {
+        margin: 30px auto;
+        max-width: 1000px;
+    }
+    
+    .debug-panel {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        padding: 15px;
+    }
+    
+    .debug-panel h4 {
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .debug-panel pre {
+        background-color: #f1f1f1;
+        padding: 10px;
+        border-radius: 4px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .result-area {
+        background-color: #f1f1f1;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .debug-tabs {
+        margin-bottom: 20px;
+    }
+    
+    .tab-content {
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 5px 5px;
+    }
+</style>
+{% endblock %} {% block page_content %}
+<div class="debug-container">
+    <div class="alert alert-warning">
+        <h3>Auto Auth Debug Tool</h3>
+        <p>This page helps diagnose issues with the auto_auth functionality. Use the tools below to test different aspects of the authentication system.</p>
+    </div>
+
+    <div class="debug-tabs">
+        <ul class="nav nav-tabs" id="debugTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">System Info</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="auth-test-tab" data-bs-toggle="tab" data-bs-target="#auth-test" type="button" role="tab" aria-controls="auth-test" aria-selected="false">Auth Test</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="get-context-tab" data-bs-toggle="tab" data-bs-target="#get-context" type="button" role="tab" aria-controls="get-context" aria-selected="false">Get Context</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="post-tab" data-bs-toggle="tab" data-bs-target="#post" type="button" role="tab" aria-controls="post" aria-selected="false">Post Method</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="js-auth-tab" data-bs-toggle="tab" data-bs-target="#js-auth" type="button" role="tab" aria-controls="js-auth" aria-selected="false">JS Auth</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="debugTabsContent">
+            <!-- System Info Tab -->
+            <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
+                <div class="debug-panel">
+                    <h4>Request Information</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Method:</strong> {{ request_method }}</p>
+                            <p><strong>Path:</strong> {{ request_path }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>User:</strong> {{ user }}</p>
+                            <p><strong>Logged In:</strong> {{ "Yes" if is_logged_in else "No" }}</p>
+                        </div>
+                    </div>
+
+                    <h5>Query Parameters</h5>
+                    <pre>{{ query_params | tojson(indent=2) }}</pre>
+
+                    <h5>System Information</h5>
+                    <pre>Frappe Version: {{ frappe_version }}</pre>
+                </div>
+            </div>
+
+            <!-- Auth Test Tab -->
+            <div class="tab-pane fade" id="auth-test" role="tabpanel" aria-labelledby="auth-test-tab">
+                <div class="debug-panel">
+                    <h4>Test Authentication</h4>
+                    <p>This test calls the <code>authenticate_user</code> function directly.</p>
+
+                    <form id="auth-test-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="auth-email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="auth-email" name="email" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="auth-password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="auth-password" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Test Authentication</button>
+                    </form>
+
+                    <div id="auth-test-result" class="result-area mt-3" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Get Context Tab -->
+            <div class="tab-pane fade" id="get-context" role="tabpanel" aria-labelledby="get-context-tab">
+                <div class="debug-panel">
+                    <h4>Test Get Context</h4>
+                    <p>This test calls the <code>get_context</code> function of auto_auth directly.</p>
+
+                    <form id="get-context-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="context-email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="context-email" name="email">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="context-password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="context-password" name="password">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="context-redirect" class="form-label">Redirect URL</label>
+                            <input type="text" class="form-control" id="context-redirect" name="redirect" value="/app/crm">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Test Get Context</button>
+                    </form>
+
+                    <div id="get-context-result" class="result-area mt-3" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Post Method Tab -->
+            <div class="tab-pane fade" id="post" role="tabpanel" aria-labelledby="post-tab">
+                <div class="debug-panel">
+                    <h4>Test Post Method</h4>
+                    <p>This test calls the <code>post</code> function of auto_auth directly.</p>
+
+                    <form id="post-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="post-email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="post-email" name="email" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="post-password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="post-password" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="post-redirect" class="form-label">Redirect URL</label>
+                            <input type="text" class="form-control" id="post-redirect" name="redirect" value="/app/crm">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="post-create-user" name="create_user" value="1" checked>
+                            <label class="form-check-label" for="post-create-user">Create user if not exists</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Test Post Method</button>
+                    </form>
+
+                    <div id="post-result" class="result-area mt-3" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- JS Auth Tab -->
+            <div class="tab-pane fade" id="js-auth" role="tabpanel" aria-labelledby="js-auth-tab">
+                <div class="debug-panel">
+                    <h4>Test JS Authentication</h4>
+                    <p>This test uses the <code>crm.auto_auth</code> JavaScript API for authentication.</p>
+
+                    <form id="js-auth-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="js-email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="js-email" name="email" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="js-password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="js-password" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="js-redirect" class="form-label">Redirect URL</label>
+                            <input type="text" class="form-control" id="js-redirect" name="redirect" value="/auto_auth_debug">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="js-use-query" name="use_query_params" checked>
+                            <label class="form-check-label" for="js-use-query">Use Query Parameters</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Test JS Authentication</button>
+                    </form>
+
+                    <div id="js-auth-result" class="result-area mt-3" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if test_results %}
+    <div class="debug-panel">
+        <h4>Test Results</h4>
+        <pre>{{ test_results | tojson(indent=2) }}</pre>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} {% block script %}
+<script>
+    $(document).ready(function() {
+        // Helper function to display results
+        function displayResult(result, elementId) {
+            var resultElement = $('#' + elementId);
+            var resultHtml = JSON.stringify(result, null, 2);
+            resultElement.html('<pre>' + resultHtml + '</pre>');
+            resultElement.show();
+        }
+
+        // Helper function to check if CRM Auto Auth is available
+        function checkAutoAuthAvailability() {
+            if (typeof crm === 'undefined' || !crm.auto_auth) {
+                $('#js-auth-tab').addClass('disabled');
+                $('#js-auth').html('<div class="alert alert-warning">CRM Auto Auth JavaScript API is not available. Make sure the auto_auth.js file is loaded.</div>');
+                return false;
+            }
+            return true;
+        }
+
+        // Initialize
+        checkAutoAuthAvailability();
+
+        // Auth Test form submission
+        $('#auth-test-form').on('submit', function(e) {
+            e.preventDefault();
+
+            var email = $('#auth-email').val();
+            var password = $('#auth-password').val();
+
+            $.ajax({
+                url: '/api/method/crm.www.auto_auth_debug.debug_auth',
+                type: 'POST',
+                data: {
+                    action: 'test_auth',
+                    email: email,
+                    password: password
+                },
+                dataType: 'json',
+                success: function(data) {
+                    displayResult(data.message || data, 'auth-test-result');
+                },
+                error: function(xhr, status, error) {
+                    displayResult({
+                        error: error,
+                        details: xhr.responseText
+                    }, 'auth-test-result');
+                }
+            });
+        });
+
+        // Get Context form submission
+        $('#get-context-form').on('submit', function(e) {
+            e.preventDefault();
+
+            var email = $('#context-email').val();
+            var password = $('#context-password').val();
+            var redirect = $('#context-redirect').val();
+
+            $.ajax({
+                url: '/api/method/crm.www.auto_auth_debug.debug_auth',
+                type: 'POST',
+                data: {
+                    action: 'test_get_context',
+                    email: email,
+                    password: password,
+                    redirect: redirect
+                },
+                dataType: 'json',
+                success: function(data) {
+                    displayResult(data.message || data, 'get-context-result');
+                },
+                error: function(xhr, status, error) {
+                    displayResult({
+                        error: error,
+                        details: xhr.responseText
+                    }, 'get-context-result');
+                }
+            });
+        });
+
+        // Post Method form submission
+        $('#post-form').on('submit', function(e) {
+            e.preventDefault();
+
+            var email = $('#post-email').val();
+            var password = $('#post-password').val();
+            var redirect = $('#post-redirect').val();
+            var createUser = $('#post-create-user').is(':checked') ? 1 : 0;
+
+            $.ajax({
+                url: '/api/method/crm.www.auto_auth_debug.debug_auth',
+                type: 'POST',
+                data: {
+                    action: 'test_post',
+                    email: email,
+                    password: password,
+                    redirect: redirect,
+                    create_user: createUser
+                },
+                dataType: 'json',
+                success: function(data) {
+                    displayResult(data.message || data, 'post-result');
+                },
+                error: function(xhr, status, error) {
+                    displayResult({
+                        error: error,
+                        details: xhr.responseText
+                    }, 'post-result');
+                }
+            });
+        });
+
+        // JS Auth form submission
+        $('#js-auth-form').on('submit', function(e) {
+            e.preventDefault();
+
+            if (!checkAutoAuthAvailability()) {
+                return;
+            }
+
+            var email = $('#js-email').val();
+            var password = $('#js-password').val();
+            var redirect = $('#js-redirect').val();
+            var useQueryParams = $('#js-use-query').is(':checked');
+
+            // First, test if the JS API is available
+            $.ajax({
+                url: '/api/method/crm.www.auto_auth_debug.debug_auth',
+                type: 'POST',
+                data: {
+                    action: 'test_js_auth'
+                },
+                dataType: 'json',
+                success: function(data) {
+                    displayResult({
+                        status: 'preparing',
+                        message: 'JS API is available, attempting authentication...',
+                        details: data.message || data
+                    }, 'js-auth-result');
+
+                    // Now use the JS API
+                    crm.auto_auth.authenticate({
+                        username: email,
+                        password: password,
+                        redirectUrl: redirect,
+                        useQueryParams: useQueryParams,
+                        onSuccess: function(data) {
+                            displayResult({
+                                status: 'success',
+                                message: 'Authentication successful',
+                                details: data
+                            }, 'js-auth-result');
+                        },
+                        onError: function(error) {
+                            displayResult({
+                                status: 'error',
+                                message: 'Authentication failed',
+                                details: error
+                            }, 'js-auth-result');
+                        }
+                    });
+                },
+                error: function(xhr, status, error) {
+                    displayResult({
+                        error: error,
+                        details: xhr.responseText
+                    }, 'js-auth-result');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
