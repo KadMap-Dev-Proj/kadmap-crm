@@ -70,6 +70,7 @@ website_route_rules = [
 	{"from_route": "/crm/<path:app_path>", "to_route": "crm"},
 	{"from_route": "/auto_auth", "to_route": "auto_auth"},
 	{"from_route": "/auto_auth_demo", "to_route": "auto_auth_demo"},
+	{"from_route": "/login", "to_route": "custom_login"},
 ]
 
 # Generators

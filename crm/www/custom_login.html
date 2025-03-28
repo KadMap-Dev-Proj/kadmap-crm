@@ -1,0 +1,92 @@
+{% extends "templates/web.html" %} {% block title %}Logging in...{% endblock %} {% block head_include %}
+<style>
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+    }
+    
+    .login-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+    
+    .logo-container {
+        margin-bottom: 20px;
+        animation: pulse 1.5s infinite ease-in-out;
+    }
+    
+    .logo {
+        width: 120px;
+        height: auto;
+    }
+    
+    .loader {
+        width: 50px;
+        height: 10px;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .loader div {
+        width: 10px;
+        height: 10px;
+        background-color: var(--primary);
+        border-radius: 50%;
+        animation: bounce 1.5s infinite ease-in-out;
+    }
+    
+    .loader div:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .loader div:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.7;
+        }
+        50% {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0.95);
+            opacity: 0.7;
+        }
+    }
+    
+    @keyframes bounce {
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+</style>
+{% endblock %} {% block page_content %}
+<div class="login-container">
+    <div class="logo-container">
+        <img src="/assets/crm/images/logo.svg" alt="Logo" class="logo">
+    </div>
+    <div class="loader">
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+</div>
+
+<script>
+    // Redirect to auto_auth after a short delay to show the animation
+    setTimeout(function() {
+        window.location.href = "/auto_auth";
+    }, 1500);
+</script>
+{% endblock %} {% block sidebar %}{% endblock %} {% block footer %}{% endblock %}

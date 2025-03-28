@@ -11,6 +11,15 @@
         text-align: center;
     }
     
+    .logo-container {
+        margin-bottom: 20px;
+    }
+    
+    .logo {
+        width: 120px;
+        height: auto;
+    }
+    
     .auth-loader .spinner {
         width: 50px;
         height: 50px;
@@ -38,6 +47,11 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
+    .auth-form .logo-container {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
     .auth-form h3 {
         margin-bottom: 20px;
         text-align: center;
@@ -57,20 +71,50 @@
         max-width: 600px;
         display: none;
     }
+    
+    .auth-loader .logo-container {
+        margin-bottom: 20px;
+        animation: pulse 1.5s infinite ease-in-out;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.7;
+        }
+        50% {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0.95);
+            opacity: 0.7;
+        }
+    }
 </style>
 {% endblock %} {% block page_content %}
 <div class="container">
     <!-- Loader for authentication -->
     <div id="auth-loader" class="auth-loader">
+        <div class="logo-container">
+            <img src="/assets/crm/images/logo.svg" alt="Logo" class="logo">
+        </div>
         <div class="spinner"></div>
         <p>Loading CRM, please wait...</p>
     </div>
 
     <!-- Error message display -->
-    <div id="auth-message" class="auth-message"></div>
+    <div id="auth-message" class="auth-message">
+        <div class="logo-container">
+            <img src="/assets/crm/images/logo.svg" alt="Logo" class="logo">
+        </div>
+    </div>
 
     <!-- Login form when no credentials are provided -->
     <div id="auth-form" class="auth-form">
+        <div class="logo-container">
+            <img src="/assets/crm/images/logo.svg" alt="Logo" class="logo">
+        </div>
         <h3>CRM Login</h3>
         <form id="login-form">
             <div class="form-group">
@@ -118,7 +162,7 @@
 
         // Function to show error message
         function showError(message) {
-            $('#auth-message').html(`
+            $('#auth-message').find('.logo-container').after(`
             <div class="alert alert-danger">
                 ${message}
             </div>
@@ -129,6 +173,8 @@
 
             // Show form after a delay
             setTimeout(function() {
+                // Remove the error message but keep the logo
+                $('#auth-message').find('.alert').remove();
                 showForm();
             }, 3000);
         }
